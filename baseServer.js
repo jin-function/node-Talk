@@ -17,7 +17,7 @@ var connection = mysql.createConnection({
 connection.connect(); //메세지는 계속 항상 받는다.
 
 let ALL_room  = []; // 전체 채팅방
-let join_user = [];
+let join_user = []; 
 
 //전체 채팅방 목록
 connection.query('SELECT room_num, count(*) AS joiner, room_state, room_name FROM chat_rooms GROUP BY room_num, room_state, room_name', function(err, rows, fields) {
