@@ -1,17 +1,16 @@
+const my_name       = prompt('What your name');
+var chat_box        = $('#chat-box');
+var msg_box         = $('#messages ul');
+var msg             = '';   // 송.수신 메세지
+var room_html       = ''; 
+var join_room       = [];   // 각 채팅방 정보
+var RoomData        = [];   // 이미 참여한 채팅방 목록
+var findRoomData    = [];   // 검색한 채팅방 목록
+var room_num        = 0;
 
-const my_name   	= prompt('What your name');
-var chat_box   		= $('#chat-box');
-var msg_box			= $('#messages ul');
-var msg 			= ''; 	// 송.수신 메세지
-var room_html		= ''; 
-var join_room		= [];	// 각 채팅방 정보
-var RoomData 		= [];	// 이미 참여한 채팅방 목록
-var findRoomData	= [];	// 검색한 채팅방 목록
-var room_num	 	= 0;
-
-var chatData 		= [];
-var New_time 		= '';	// 메세지 송신
-var Old_time 		= '';	// 메세지 수신
+var chatData        = [];
+var New_time        = '';   // 메세지 송신
+var Old_time        = '';   // 메세지 수신
 var msg_count       = 0;
 
 // AM,PM Format
@@ -104,6 +103,7 @@ chat_box.find('#m').on('keyup', function(){
 
 
 function JoinRoom(data, i){
+    room_num = i;
     room_html = '<img> </img> <div class="test-box"><h5>'+ data.room_name +'</h5> <p> last msg </p> </div>';
     chat_box.find('#room-list ul').append($('<li id="room'+i+'" data-room="'+i+'">').html(room_html));
     join_room.push({'room': data.room_name, 'view':false, 'unconfirmed':0}); 
@@ -111,23 +111,29 @@ function JoinRoom(data, i){
 }
 
 function findRoom(data){
-	findRoomData = data;
-	if(RoomData){
-		for(var i =0; i < RoomData.length; i++){
-			for(var j = 0; j < data.length; j++){
-				var my_room 	= RoomData[i].room_state + RoomData[i].room_name; 
-				var find_room	= data[j].room_state + data[j].room_name;
-				if(my_room == find_room){
-					findRoomData.splice(j, 1);
-				} 
-			}
-		}
-	}
-	for(var i = 0; i < findRoomData.length; i++){
-		findRoomData[i].user_name = my_name;
-		room_html = '<img> </img> <div class="test-box"><h5>'+ findRoomData[i].room_name +'</h5></div>';
-		chat_box.find('#search ul').append($('<li id="search'+i+'" data-room="'+i+'" class="show">').html(room_html));
-	}	
+    findRoomData = data;
+    console.log(RoomData , 'roomdata find');
+    if(RoomData){
+        for(var i =0; i < RoomData.length; i++){
+            for(var j = 0; j < data.length; j++){
+                var my_room     = RoomData[i].room_state + RoomData[i].room_name; 
+                var find_room   = data[j].room_state + data[j].room_name;
+                if(my_room == find_room){
+                    findRoomData.splice(j, 1);
+                } 
+            }
+        }
+    }
+    for(var i = 0; i < findRoomData.length; i++){
+        findRoomData[i].user_name = my_name;
+        room_html = '<img> </img> <div class="test-box"><h5>'+ findRoomData[i].room_name +'</h5></div>';
+        chat_box.find('#search ul').append($('<li id="search'+i+'" data-room="'+i+'" class="show">').html(room_html));
+    }
+
+    var row = findRoomData.length;
+    if(row == 0){ //공개방이 없을 경우
+        $('.coment').html('<p><i class="fas fa-exclamation-circle"></i> 참여 가능한 채팅방이 없습니다. </p>');
+    }   
 }
 
 
@@ -145,29 +151,24 @@ $.getJSON("/chat/roomlist/"+my_name+"", "", function(data) {
     if(row == 0){ //참여 정보가 없을경우 검색페이지
         chat_box.removeClass().addClass('search');
     }
-
-    var row2 = $('#search .move li');
-    if(row2.length == 0){ //방이 없을 경우
-        $('.coment').html('<p><i class="fas fa-exclamation-circle"></i> 참여 가능한 채팅방이 없습니다. </p>');
-    }
 });
 
 
 function ChatApp(){
-	$(() => {
-		var Sfirst_turn   = true;
+    $(() => {
+        var Sfirst_turn   = true;
         var Gfirst_turn   = true;
 
-		// 모든 메세지를 전송 받기 위해 이전 참여 채팅방 모두에 자동 참가 한다.
+        // 모든 메세지를 전송 받기 위해 이전 참여 채팅방 모두에 자동 참가 한다.
         for(var i =0; i < RoomData.length; i++){
             socket.emit('JoinRoom', RoomData[i]);
         }
 
         //미 참여 방목록을 보여준다.
-	    socket.emit('find Room');
-	    socket.on('find Room', function(rows){
-	    	findRoom(rows);
-	    });
+        socket.emit('find Room');
+        socket.on('find Room', function(rows){
+            findRoom(rows);
+        });
 
         //검색 목록을 보여준다.
         $('input[name=keyword]').keyup(function(){
@@ -191,12 +192,12 @@ function ChatApp(){
             }
         });
 
-	    
-	    // 기존 채팅방 선택 입장 - document지정은 동적 생성 요소를 인지하기 위함.
-	    $(document).on("click", "#chat-box .move li", function(){
-	    	chat_box.find('.Cbody').scrollTop(0); 
-	    	var item  = $(this);
-	    	var mode  = item.parent('ul').data('mode');
+        
+        // 기존 채팅방 선택 입장 - document지정은 동적 생성 요소를 인지하기 위함.
+        $(document).on("click", "#chat-box .move li", function(){
+            chat_box.find('.Cbody').scrollTop(0); 
+            var item  = $(this);
+            var mode  = item.parent('ul').data('mode');
             var title = '';
             room_num = item.data('room');
             chat_box.removeClass().addClass(mode);
@@ -207,54 +208,58 @@ function ChatApp(){
                 join_room[i].view = false;  
             }
 
-	    	if(mode == 'join'){ //room join mode
-		    	join_room[room_num].view = true;
-		    	join_room[room_num].unconfirmed = 0; //메세지 확인시 초기화.
-		    	var num = item.find('p i').text();
+            if(mode == 'join'){ //room join mode
+                var num = join_room[room_num].unconfirmed;
+                join_room[room_num].view = true;
+                join_room[room_num].unconfirmed = 0; //메세지 확인시 초기화.
+                //미확인 메세지 갱신
+                msg_count -= num;
                 item.find('p i').remove();
-                msg_count -= parseInt(num);
+
                 socket.emit('chat Logs', RoomData[room_num]); // 해당 채팅방 로그를 가져온다.
                 // console.log('룸 선택 입장', RoomData[i]);
                 title = RoomData[room_num].room_name;
                 chat_box.find('h3.title').text(title);
+
+
                 if(msg_count > 0){    
                     chat_box.find('.room-state ul:nth-child(2) li i').html('<i class="ball">'+ msg_count +'</i>');
                 } else {
                     chat_box.find('.room-state ul:nth-child(2) li i').html('');
-                }
-	    	} else if (mode == 'rooms' || mode == 'search'){
+                }                              
+            } else if (mode == 'rooms' || mode == 'search'){
                 chat_box.find('h3.title').text(' Node Chat ');
-	    	} else if (mode == 'searchJoin'){
-	    		socket.emit('JoinRoom', findRoomData[room_num]); //검색 방에 접속.
-	    		socket.emit('chat Logs', findRoomData[room_num]); // 해당 채팅방 로그를 가져온다.
-	    		socket.emit('first join', findRoomData[room_num]);
-	    		RoomData.push(findRoomData[room_num]);
+            } else if (mode == 'searchJoin'){
+                socket.emit('JoinRoom', findRoomData[room_num]); //검색 방에 접속.
+                socket.emit('chat Logs', findRoomData[room_num]); //해당 채팅방 로그를 가져온다.
+                socket.emit('first join', findRoomData[room_num]);
+                RoomData.push(findRoomData[room_num]);
                 title = findRoomData[room_num].room_name;
                 chat_box.find('h3.title').text(title);
                 item.remove(); // 방 목록에서 제거
-	    	}
-	    });
+            }
+        });
 
-	    // 새로운 방 참여
-	    socket.on('first join', function(){
+        // 새로운 방 참여
+        socket.on('first join', function(){
             var i = RoomData.length; 
-	    	JoinRoom(findRoomData[room_num], i-1);
-	    });
+            JoinRoom(findRoomData[room_num], i-1);
+            join_room[room_num].view = true;
+        });
 
-
-	    // 메세지 전송
-	    chat_box.find('.Cfooter form').submit(() => {
-	    	msg = chat_box.find('#m').val();
-	        chat_box.find('#m').val('').focus();
-	        socket.emit('chat message', RoomData[room_num], msg, New_time);
-	        msg = '';
-	        chat_box.find('.msg-box').addClass('on').removeClass('active');
+        // 메세지 전송
+        chat_box.find('.Cfooter form').submit(() => {
+            msg = chat_box.find('#m').val();
+            chat_box.find('#m').val('').focus();
+            socket.emit('chat message', RoomData[room_num], msg, New_time);
+            msg = '';
+            chat_box.find('.msg-box').addClass('on').removeClass('active');
             chat_box.find('.msg-box').attr('disabled', true);
-	        return false;
-	    });
+            return false;
+        });
 
 
-	    //로그메세지 출력
+        //로그메세지 출력
         socket.on('chat Logs', function(rows){
             for(var i = rows.length-1; i >= 0; i--){
                 // 이전 작성 메세지(limit 15)
@@ -294,9 +299,9 @@ function ChatApp(){
         });
 
 
-	    //메세지 출력
-	    socket.on('chat message', (data, msg, Old_time) => {
-	    	msg = Convert_Html(msg);    
+        //메세지 출력
+        socket.on('chat message', (data, msg, Old_time) => {
+            msg = Convert_Html(msg);    
             TimeFormat();
             msg_count = 0;
             for(var i = 0; i < join_room.length; i++){
@@ -348,35 +353,35 @@ function ChatApp(){
                 console.log(msg_count);
                 chat_box.find('.room-state ul:nth-child(2) li i').html('<i class="ball">'+ msg_count +'</i>');
             }
-	    });
+        });
 
 
-	    //퇴장 알림
-	    socket.on('leaveRoom', (data) => {
-	        msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방을 종료하였습니다. </p>'));
-	        ScrollBottom();
-	    });
+        //퇴장 알림
+        socket.on('leaveRoom', (data) => {
+            msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방을 종료하였습니다. </p>'));
+            ScrollBottom();
+        });
 
-	    //입장 알림
-	    socket.on('JoinRoom', (data) => {
-	    	if(data != my_name){
-	        	msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방에 접속하였습니다.</p>'));        
-	    	}
-	    	ScrollBottom();
-	    }); 
+        //입장 알림
+        socket.on('JoinRoom', (data) => {
+            if(data != my_name){
+                msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방에 접속하였습니다.</p>'));        
+            }
+            ScrollBottom();
+        }); 
 
-	    //완전 퇴장 알림
-	    socket.on('deleteRoom', (data) => {
-	        msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방을 나갔습니다. </p>'));
-	        ScrollBottom();
-	    });
+        //완전 퇴장 알림
+        socket.on('deleteRoom', (data) => {
+            msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방을 나갔습니다. </p>'));
+            ScrollBottom();
+        });
 
-	    //새로 입장 알림
-	    socket.on('createRoom', (data) => {
-	    	if(data != my_name){
-	        	msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방에 참여하였습니다.</p>'));
-	        }
-	        ScrollBottom();       
-	    });          
-	});
+        //새로 입장 알림
+        socket.on('createRoom', (data) => {
+            if(data != my_name){
+                msg_box.append($('<li class="sys_msg">').html('<p><b>' + data + '</b> 님이 채팅방에 참여하였습니다.</p>'));
+            }
+            ScrollBottom();       
+        });          
+    });
 }
