@@ -5,27 +5,27 @@ const socket = require( 'socket.io' );
 const express = require('express');
 const app = express();
 
+
 /* DB 연결 */
 var mysql      = require('mysql');
 var connection = mysql.createConnection({
     host     : '192.168.1.31',
-    user     : 'root',
-    password : 'password',
+    user     : 'name',
+    password : 'pass',
     port     : 3306,
-    database : 'database'
+    database : 'db'
 });
 connection.connect(); //메세지는 계속 항상 받는다.
 
 let ALL_room  = []; // 전체 채팅방
-let join_user = []; 
+let join_user = [];
 
 //전체 채팅방 목록
 connection.query('SELECT room_num, count(*) AS joiner, room_state, room_name FROM chat_rooms GROUP BY room_num, room_state, room_name', function(err, rows, fields) {
     if (err){
         console.log('Error while performing Query.', err);
-        throw err;
     } else {
-        for(var i = 0; i < rows.length; i++){
+        for(var i = 0; i < rows; i++){
             ALL_room.push({"room_num" : rows[i].room_num, "room_state" : rows[i].room_state, "room_name" : rows[i].room_name, 'user_name': ''});
         }
     }
@@ -40,9 +40,9 @@ app.get('/', function (req, res) {
 });
 
 const httpServer = http.createServer(app);
-var io = socket.listen( httpServer );
+const io = socket.listen( httpServer );
 
-var room = '';
+let room = '';
 
 //소캣 연결
 io.on('connection', (socket) => {
@@ -53,17 +53,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chat Logs', (data) => {
-    	console.log(data);
         //이전 작성된 메세지. 
         var query = "SELECT * FROM chat_logs WHERE room = "+ data.room_num +" AND room_type = '"+ data.room_state +"' ORDER BY id DESC LIMIT 15";
         connection.query(query , function(err, rows, fields){
             if (err){
                 console.log('Error while performing Query.', err);
-                throw err;
             } else {
                 io.in(socket.id).emit('chat Logs', rows);
             }
-        	console.log(rows);
         });
     });
 
@@ -82,8 +79,13 @@ io.on('connection', (socket) => {
         
         // log 저장
         var query = "INSERT INTO chat_rooms (room_num, room_state, room_name, user_name) VALUES ("+room_num+","+type+","+room_name+","+user_name+")";        
-        connection.query(query);
-    	console.log(data , 'sussecs');
+        connection.query(query, function(err){
+            if(err){
+                console.log(err , 'fail');
+            } else {
+                console.log(data , 'sussecs');
+            }
+        });
     });
 
     //채팅방 입장
@@ -111,11 +113,17 @@ io.on('connection', (socket) => {
         var user_name = connection.escape(data.user_name);
         var message   = connection.escape(msg);
         var type      = connection.escape(data.room_state);
-        var msg_time  = Old_time;
+        var msg_time  = connection.escape(Old_time);
         
         // log 저장
-        var query = "INSERT INTO chat_logs (room, room_type, name, msg, msg_time) VALUES ("+room_num+","+type+", "+user_name+", "+message+", '"+msg_time+"')";        
-        connection.query(query);
+        var query = "INSERT INTO chat_logs (room, room_type, name, msg, msg_time) VALUES ("+room_num+","+type+", "+user_name+", "+message+", "+msg_time+")";        
+        connection.query(query, function(err){
+            if(err){
+                console.log(err , 'fail');
+            } else {
+                console.log(data, 'sussecs');
+            }
+        });
     });
 });
 
